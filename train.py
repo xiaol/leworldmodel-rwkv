@@ -11,7 +11,7 @@ from lightning.pytorch.loggers import WandbLogger
 from omegaconf import OmegaConf, open_dict
 
 from jepa import JEPA
-from module import ARPredictor, Embedder, MLP, SIGReg
+from module import ARPredictor, Embedder, MLP, RWKV7Predictor, SIGReg
 from utils import get_column_normalizer, get_img_preprocessor, ModelObjectCallBack
 
 
@@ -47,6 +47,8 @@ def lejepa_forward(self, batch, stage, cfg):
 
 @hydra.main(version_base=None, config_path="./config/train", config_name="lewm")
 def run(cfg):
+    pl.seed_everything(cfg.seed, workers=True)
+
     #########################
     ##       dataset       ##
     #########################
@@ -91,12 +93,19 @@ def run(cfg):
     embed_dim = cfg.wm.get("embed_dim", hidden_dim)
     effective_act_dim = cfg.data.dataset.frameskip * cfg.wm.action_dim
 
-    predictor = ARPredictor(
+    predictor_cfg = OmegaConf.to_container(cfg.predictor, resolve=True)
+    predictor_type = predictor_cfg.pop("type", "transformer")
+    predictor_cls = {
+        "transformer": ARPredictor,
+        "rwkv7": RWKV7Predictor,
+    }[predictor_type]
+
+    predictor = predictor_cls(
         num_frames=cfg.wm.history_size,
         input_dim=embed_dim,
         hidden_dim=hidden_dim,
         output_dim=hidden_dim,
-        **cfg.predictor,
+        **predictor_cfg,
     )
 
     action_encoder = Embedder(input_dim=effective_act_dim, emb_dim=embed_dim)

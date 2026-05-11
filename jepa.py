@@ -146,7 +146,13 @@ class JEPA(nn.Module):
         goal = self.encode(goal)
 
         info_dict["goal_emb"] = goal["emb"]
-        info_dict = self.rollout(info_dict, action_candidates)
+        history_size = getattr(getattr(self, "predictor", None), "pos_embedding", None)
+        history_size = (
+            history_size.size(1)
+            if history_size is not None
+            else info_dict["pixels"].size(2)
+        )
+        info_dict = self.rollout(info_dict, action_candidates, history_size=history_size)
 
         cost = self.criterion(info_dict)
         

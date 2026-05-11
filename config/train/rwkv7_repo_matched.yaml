@@ -1,0 +1,10 @@
+defaults:
+  - rwkv7
+  - _self_
+
+output_model_name: lewm_rwkv7_repo_matched
+
+# Matches the current repo transformer LeWM size closely:
+# transformer LeWM: 18.03M params, this RWKV-7 LeWM: 18.22M params.
+predictor:
+  depth: 11
